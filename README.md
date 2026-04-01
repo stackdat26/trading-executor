@@ -138,8 +138,8 @@ This project is part of a larger suite of algorithmic trading tools:
 
 | Repo | Description |
 |---|---|
-| [trading-bot](https://github.com/your-username/trading-bot) | The core signal generation bot — scans markets and outputs signals |
-| [trading-screener](https://github.com/your-username/trading-screener) | Market screener that filters symbols by technical conditions |
+| [trading-bot](https://github.com/stackdat26/trading-bot) | The core signal generation bot — scans markets and outputs signals |
+| [trading-screener](https://github.com/stackdat26/trading-screener) | Market screener that filters symbols by technical conditions |
 | **trading-executor** | This repo — receives signals and executes trades automatically |
 
 ---
