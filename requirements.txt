@@ -1,0 +1,14 @@
+alpaca-trade-api>=3.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+gspread>=5.12.0
+google-auth>=2.23.0
+schedule>=1.2.0
+websocket-client>=1.6.0
+alpaca-trade-api
+google-auth
+gspread
+python-dotenv
+requests
+schedule
+websocket-client
