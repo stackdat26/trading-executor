@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "kZv55Ih0uxYK-8Qq7KLWc"
+uri = "file://README.md"
+type = "text"
+title = "QuantBot Trading Executor — README.md"
