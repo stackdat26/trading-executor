@@ -11,7 +11,6 @@ ALPACA_SECRET = os.environ.get("ALPACA_SECRET", "")
 GOOGLE_SHEETS_CREDS_RAW = os.environ.get("GOOGLE_SHEETS_CREDS", "")
 GOOGLE_SHEETS_NAME = "QuantBot Trade Log"
 
-SIGNALS_FILE = "signals.json"
 LOG_FILE = "trading_executor.log"
 
 POSITION_SIZE_USD = 1000.0

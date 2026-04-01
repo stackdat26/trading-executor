@@ -42,7 +42,7 @@ def process_signal(signal: dict):
 
 
 def signal_loop():
-    logger.info("Signal reader started — watching signals.json")
+    logger.info(f"Signal reader started — polling {signal_reader.get_endpoint()} every 10s")
     while True:
         try:
             new_signals = signal_reader.read_new_signals()

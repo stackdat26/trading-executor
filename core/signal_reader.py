@@ -1,92 +1,114 @@
-import json
-import os
 import logging
+import requests
 from datetime import datetime
 from config import settings
 
 logger = logging.getLogger(__name__)
 
-_processed_signals: set = set()
+SIGNALS_ENDPOINT = "https://7e0d7807-49d3-4fdf-930b-d209de8955e9-00-95e76zodt574.janeway.replit.dev/api/signals"
+REQUEST_TIMEOUT = 10
+
+_last_processed_timestamp: str | None = None
+_processed_keys: set = set()
 
 
 def _signal_key(signal: dict) -> str:
     return f"{signal.get('symbol')}_{signal.get('timestamp')}_{signal.get('action')}"
 
 
+def _parse_timestamp(ts: str | None) -> datetime | None:
+    if not ts:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
+        try:
+            return datetime.strptime(ts, fmt)
+        except ValueError:
+            continue
+    return None
+
+
 def read_new_signals() -> list[dict]:
-    path = settings.SIGNALS_FILE
-    if not os.path.exists(path):
-        return []
+    global _last_processed_timestamp
 
     try:
-        with open(path, "r") as f:
-            content = f.read().strip()
-        if not content:
-            return []
-
-        data = json.loads(content)
-        if isinstance(data, dict):
-            signals = [data]
-        elif isinstance(data, list):
-            signals = data
-        else:
-            logger.warning("signals.json has unexpected format")
-            return []
-
-        new_signals = []
-        for sig in signals:
-            key = _signal_key(sig)
-            if key not in _processed_signals:
-                if _validate_signal(sig):
-                    _processed_signals.add(key)
-                    new_signals.append(sig)
-                else:
-                    logger.warning(f"Invalid signal skipped: {sig}")
-
-        return new_signals
-
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse signals.json: {e}")
+        response = requests.get(SIGNALS_ENDPOINT, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.ConnectionError:
+        logger.warning(f"Cannot reach signal bot at {SIGNALS_ENDPOINT} — will retry")
+        return []
+    except requests.exceptions.Timeout:
+        logger.warning("Signal endpoint timed out — will retry")
+        return []
+    except requests.exceptions.HTTPError as e:
+        logger.warning(f"Signal endpoint returned error: {e}")
         return []
     except Exception as e:
-        logger.error(f"Error reading signals.json: {e}")
+        logger.error(f"Unexpected error polling signals: {e}")
         return []
+
+    if isinstance(data, dict):
+        signals = [data]
+    elif isinstance(data, list):
+        signals = data
+    else:
+        logger.warning("Unexpected signal response format")
+        return []
+
+    if not signals:
+        return []
+
+    new_signals = []
+    for sig in signals:
+        if not _validate_signal(sig):
+            continue
+
+        key = _signal_key(sig)
+        if key in _processed_keys:
+            continue
+
+        sig_ts = _parse_timestamp(sig.get("timestamp"))
+        last_ts = _parse_timestamp(_last_processed_timestamp)
+
+        if last_ts and sig_ts and sig_ts <= last_ts:
+            continue
+
+        _processed_keys.add(key)
+        if sig_ts:
+            if not last_ts or sig_ts > last_ts:
+                _last_processed_timestamp = sig.get("timestamp")
+
+        logger.info(f"New signal received from bot: {sig.get('action')} {sig.get('symbol')} @ {sig.get('entry')} (conf={sig.get('confidence')}%)")
+        new_signals.append(sig)
+
+    return new_signals
 
 
 def _validate_signal(signal: dict) -> bool:
     required = ["symbol", "action", "entry"]
     for field in required:
         if field not in signal:
-            logger.warning(f"Signal missing required field: {field}")
+            logger.warning(f"Signal missing required field '{field}': {signal}")
             return False
     if signal["action"].upper() not in ("BUY", "SELL"):
         logger.warning(f"Signal has invalid action: {signal['action']}")
         return False
-    if not isinstance(signal["entry"], (int, float)) or signal["entry"] <= 0:
-        logger.warning(f"Signal has invalid entry price: {signal['entry']}")
+    try:
+        if float(signal["entry"]) <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        logger.warning(f"Signal has invalid entry price: {signal.get('entry')}")
         return False
     return True
 
 
-def mark_processed(signal: dict):
-    _processed_signals.add(_signal_key(signal))
+def get_endpoint() -> str:
+    return SIGNALS_ENDPOINT
+
+
+def get_last_processed_timestamp() -> str | None:
+    return _last_processed_timestamp
 
 
 def get_processed_count() -> int:
-    return len(_processed_signals)
-
-
-def write_sample_signal():
-    sample = {
-        "symbol": "NVDA",
-        "action": "BUY",
-        "entry": 164.71,
-        "stop_loss": 154.52,
-        "take_profit": 170.71,
-        "confidence": 80,
-        "daily_atr": 5.20,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
-    with open(settings.SIGNALS_FILE, "w") as f:
-        json.dump(sample, f, indent=2)
-    logger.info(f"Sample signal written to {settings.SIGNALS_FILE}")
+    return len(_processed_keys)
