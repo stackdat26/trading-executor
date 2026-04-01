@@ -300,6 +300,11 @@ DASHBOARD_HTML = """
 """
 
 
+@app.route("/healthz")
+def health():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/")
 def index():
     return render_template_string(DASHBOARD_HTML)
