@@ -7,3 +7,12 @@ gspread>=5.12.0
 google-auth>=2.23.0
 schedule>=1.2.0
 pytz>=2024.1
+alpaca-py
+flask
+google-auth
+gspread
+gunicorn
+python-dotenv
+pytz
+requests
+schedule
