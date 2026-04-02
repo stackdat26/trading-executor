@@ -19,13 +19,42 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+INDEX_TO_ETF = {
+    "^IXIC": "QQQ",
+    "^GSPC": "SPY",
+    "^DJI": "DIA",
+    "^RUT": "IWM",
+    "^VIX": "VIXY",
+}
+
+
 def process_signal(signal: dict):
-    symbol = signal["symbol"]
+    raw_symbol = signal["symbol"]
+    symbol = INDEX_TO_ETF.get(raw_symbol, raw_symbol)
+    if symbol != raw_symbol:
+        logger.info(f"Mapped index symbol {raw_symbol} → {symbol}")
     action = signal["action"].upper()
-    entry = float(signal["entry"])
+    index_entry = float(signal["entry"])
     daily_atr = float(signal.get("daily_atr", 0))
     signal_tp = float(signal.get("take_profit", 0))
     signal_sl = float(signal.get("stop_loss", 0))
+
+    # When symbol was mapped from an index, fetch the real ETF price and
+    # rescale TP/SL by the same percentage distance from the index entry.
+    if symbol != raw_symbol:
+        etf_price = alpaca_trader.get_latest_price(symbol)
+        if not etf_price:
+            logger.error(f"Could not fetch live price for {symbol}, skipping signal")
+            return
+        entry = etf_price
+        if index_entry > 0:
+            if signal_tp:
+                signal_tp = round(etf_price * (signal_tp / index_entry), 2)
+            if signal_sl:
+                signal_sl = round(etf_price * (signal_sl / index_entry), 2)
+        logger.info(f"Rescaled prices for {symbol}: entry={entry:.2f} TP={signal_tp} SL={signal_sl}")
+    else:
+        entry = index_entry
 
     logger.info(f"Processing signal: {action} {symbol} @ {entry} (ATR={daily_atr}, conf={signal.get('confidence')}%)")
 
