@@ -1,3 +1,4 @@
+import os
 import logging
 import requests
 from datetime import datetime
@@ -5,7 +6,10 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-SIGNALS_ENDPOINT = "https://7e0d7807-49d3-4fdf-930b-d209de8955e9-00-95e76zodt574.janeway.replit.dev/api/signals"
+SIGNALS_ENDPOINT = os.environ.get(
+    "SIGNALS_ENDPOINT",
+    "https://7e0d7807-49d3-4fdf-930b-d209de8955e9-00-95e76zodt574.janeway.replit.dev/api/signals"
+)
 REQUEST_TIMEOUT = 10
 
 _last_processed_timestamp: str | None = None
