@@ -2,6 +2,8 @@
 
 > Automated paper trading executor that connects to the QuantBot signal bot, places trades on an Alpaca paper account, and logs every result to Google Sheets — fully hands-free.
 
+Executor Dashboard: https://trading-executor-e0gy.onrender.com/
+
 ---
 
 ## How It Works
